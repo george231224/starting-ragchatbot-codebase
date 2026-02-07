@@ -2,22 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Security Rules
+
+- **NEVER read `.env` files or any files containing secrets/credentials**
+- Do not read, cat, or access `.env`, `.env.local`, `.env.production`, or similar files
+- If you need to check environment variable names, refer to `.env.example` instead
+
 ## Build and Run Commands
 
 ```bash
-# Start the application (from project root)
-cd backend && uv run uvicorn app:app --reload --port 8000
-
-# Or use the shell script
-./run.sh
+# Start the application (from backend directory, use Python 3.12 for PyTorch compatibility)
+uv run --python 3.12 uvicorn app:app --reload --port 8000
 
 # Install dependencies
 uv sync
-```
-
-**Note for Intel Macs**: PyTorch 2.3+ doesn't support Intel Macs. Use Python 3.12 with torch<2.3:
-```bash
-uv run --python 3.12 uvicorn app:app --reload --port 8000
 ```
 
 The app runs at `http://localhost:8000` with API docs at `/docs`.
