@@ -58,4 +58,4 @@ class SessionManager:
     def clear_session(self, session_id: str):
         """Clear all messages from a session"""
         if session_id in self.sessions:
-            self.sessions[session_id] = []
+            del self.sessions[session_id]
