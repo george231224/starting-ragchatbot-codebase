@@ -241,8 +241,27 @@ header h1 {
 }
 
 .sources-content {
-    padding: 0 0.5rem 0.25rem 1.5rem;
+    padding: 0.25rem 0.5rem 0.25rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.source-tag {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    background: var(--surface-hover);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
     color: var(--text-secondary);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+a.source-tag:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
 }
 
 /* Markdown formatting styles */

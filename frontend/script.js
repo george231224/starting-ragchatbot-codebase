@@ -124,10 +124,10 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     if (sources && sources.length > 0) {
         const sourceItems = sources.map(s => {
             if (s.link) {
-                return `<a href="${s.link}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.text)}</a>`;
+                return `<a class="source-tag" href="${s.link}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.text)}</a>`;
             }
-            return escapeHtml(s.text);
-        }).join(', ');
+            return `<span class="source-tag">${escapeHtml(s.text)}</span>`;
+        }).join('');
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
