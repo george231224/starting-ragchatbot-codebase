@@ -122,7 +122,13 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
-        const sourceItems = sources.map(s => {
+        const sorted = [...sources].sort((a, b) => {
+            const numA = a.text.match(/Lesson (\d+)/);
+            const numB = b.text.match(/Lesson (\d+)/);
+            if (numA && numB) return parseInt(numA[1]) - parseInt(numB[1]);
+            return a.text.localeCompare(b.text);
+        });
+        const sourceItems = sorted.map(s => {
             if (s.link) {
                 return `<a class="source-tag" href="${s.link}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.text)}</a>`;
             }
