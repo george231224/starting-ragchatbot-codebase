@@ -175,18 +175,137 @@ class TestToolCalling:
         assert tool_result_content[0]["tool_use_id"] == "t1"
         assert tool_result_content[0]["content"] == "tool output"
 
-    def test_follow_up_call_excludes_tools(self, mock_client, generator):
-        """Second API call has no 'tools' key."""
+    def test_follow_up_call_includes_tools(self, mock_client, generator):
+        """In-loop follow-up calls include tools so Claude can request another round."""
         mock_client.messages.create.side_effect = [
             _make_tool_response("search_course_content", {"query": "x"}),
             _make_text_response("done"),
         ]
         tool_manager = MagicMock()
         tool_manager.execute_tool.return_value = "result"
+        tools = [{"name": "search_course_content"}]
 
-        generator.generate_response(
-            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager
-        )
+        generator.generate_response(query="q", tools=tools, tool_manager=tool_manager)
 
         second_call = mock_client.messages.create.call_args_list[1]
-        assert "tools" not in second_call.kwargs
+        assert second_call.kwargs["tools"] == tools
+
+
+# ---------------------------------------------------------------------------
+# Multi-round tool calling
+# ---------------------------------------------------------------------------
+
+class TestMultiRoundToolCalling:
+    def test_two_sequential_tool_rounds(self, mock_client, generator):
+        """Claude makes two tool calls across separate API rounds, then gives a text answer."""
+        mock_client.messages.create.side_effect = [
+            _make_tool_response("get_course_outline", {"course_name": "Python"}, "t1"),
+            _make_tool_response("search_course_content", {"query": "decorators"}, "t2"),
+            _make_text_response("Here is the combined answer."),
+        ]
+        tool_manager = MagicMock()
+        tool_manager.execute_tool.side_effect = ["outline text", "search results"]
+
+        result = generator.generate_response(
+            query="Find similar topics to lesson 4 of Python",
+            tools=[{"name": "search_course_content"}],
+            tool_manager=tool_manager,
+        )
+
+        assert result == "Here is the combined answer."
+        assert mock_client.messages.create.call_count == 3
+        assert tool_manager.execute_tool.call_count == 2
+        tool_manager.execute_tool.assert_any_call("get_course_outline", course_name="Python")
+        tool_manager.execute_tool.assert_any_call("search_course_content", query="decorators")
+
+    def test_two_rounds_message_accumulation(self, mock_client, generator):
+        """After two tool rounds the third API call receives 5 messages."""
+        mock_client.messages.create.side_effect = [
+            _make_tool_response("get_course_outline", {"course_name": "A"}, "t1"),
+            _make_tool_response("search_course_content", {"query": "B"}, "t2"),
+            _make_text_response("final"),
+        ]
+        tool_manager = MagicMock()
+        tool_manager.execute_tool.side_effect = ["outline", "results"]
+
+        generator.generate_response(
+            query="q", tools=[{"name": "t"}], tool_manager=tool_manager,
+        )
+
+        # Third call (forced-text) should have: user, asst, user(tool_result), asst, user(tool_result)
+        third_call = mock_client.messages.create.call_args_list[2]
+        messages = third_call.kwargs["messages"]
+        assert len(messages) == 5
+        assert [m["role"] for m in messages] == ["user", "assistant", "user", "assistant", "user"]
+
+    def test_max_rounds_forces_text_response(self, mock_client, generator):
+        """When both rounds use tools, a final call without tools forces a text answer."""
+        mock_client.messages.create.side_effect = [
+            _make_tool_response("search_course_content", {"query": "a"}, "t1"),
+            _make_tool_response("search_course_content", {"query": "b"}, "t2"),
+            _make_text_response("forced final"),
+        ]
+        tool_manager = MagicMock()
+        tool_manager.execute_tool.return_value = "data"
+
+        result = generator.generate_response(
+            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager,
+        )
+
+        assert result == "forced final"
+        # The final (3rd) call should NOT include tools
+        final_call = mock_client.messages.create.call_args_list[2]
+        assert "tools" not in final_call.kwargs
+
+    def test_single_round_still_works(self, mock_client, generator):
+        """A single tool round followed by text is backward-compatible."""
+        mock_client.messages.create.side_effect = [
+            _make_tool_response("search_course_content", {"query": "x"}, "t1"),
+            _make_text_response("answer"),
+        ]
+        tool_manager = MagicMock()
+        tool_manager.execute_tool.return_value = "data"
+
+        result = generator.generate_response(
+            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager,
+        )
+
+        assert result == "answer"
+        assert mock_client.messages.create.call_count == 2
+        assert tool_manager.execute_tool.call_count == 1
+
+    def test_tool_execution_exception_returns_error_to_claude(self, mock_client, generator):
+        """If tool_manager.execute_tool raises, the error is sent as tool_result content."""
+        mock_client.messages.create.side_effect = [
+            _make_tool_response("search_course_content", {"query": "x"}, "t1"),
+            _make_text_response("graceful answer"),
+        ]
+        tool_manager = MagicMock()
+        tool_manager.execute_tool.side_effect = RuntimeError("connection failed")
+
+        result = generator.generate_response(
+            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager,
+        )
+
+        assert result == "graceful answer"
+        # Verify the error was sent as tool_result content
+        second_call = mock_client.messages.create.call_args_list[1]
+        tool_result_msg = second_call.kwargs["messages"][2]["content"]
+        assert tool_result_msg[0]["type"] == "tool_result"
+        assert "connection failed" in tool_result_msg[0]["content"]
+
+    def test_second_round_includes_tools(self, mock_client, generator):
+        """The second in-loop API call still includes tools."""
+        mock_client.messages.create.side_effect = [
+            _make_tool_response("search_course_content", {"query": "a"}, "t1"),
+            _make_tool_response("search_course_content", {"query": "b"}, "t2"),
+            _make_text_response("done"),
+        ]
+        tool_manager = MagicMock()
+        tool_manager.execute_tool.return_value = "data"
+        tools = [{"name": "search_course_content"}]
+
+        generator.generate_response(query="q", tools=tools, tool_manager=tool_manager)
+
+        second_call = mock_client.messages.create.call_args_list[1]
+        assert second_call.kwargs["tools"] == tools
