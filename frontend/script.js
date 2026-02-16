@@ -226,8 +226,12 @@ function setupThemeToggle() {
     const themeToggle = document.getElementById('themeToggle');
     const savedTheme = localStorage.getItem('theme');
 
+    if (savedTheme === 'light') {
+        document.body.setAttribute('data-theme', 'light');
+    } else {
+        document.body.removeAttribute('data-theme');
+    }
     if (savedTheme) {
-        document.body.setAttribute('data-theme', savedTheme);
         updateToggleLabel(savedTheme);
     }
 

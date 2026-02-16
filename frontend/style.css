@@ -26,7 +26,7 @@
 }
 
 /* Light Theme */
-[data-theme="light"] {
+body[data-theme="light"] {
     --primary-color: #2563eb;
     --primary-hover: #1d4ed8;
     --background: #f8fafc;
@@ -753,18 +753,18 @@ details[open] .suggested-header::before {
 }
 
 /* Light mode: show moon icon, hide sun */
-[data-theme="light"] .sun-icon {
+body[data-theme="light"] .sun-icon {
     opacity: 0;
     transform: rotate(90deg);
 }
 
-[data-theme="light"] .moon-icon {
+body[data-theme="light"] .moon-icon {
     opacity: 1;
     transform: rotate(0deg);
 }
 
 /* Light theme: user message text stays white */
-[data-theme="light"] .message.user .message-content {
+body[data-theme="light"] .message.user .message-content {
     color: white;
 }
 
