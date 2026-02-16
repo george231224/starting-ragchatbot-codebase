@@ -6,10 +6,10 @@ Uses real VectorStore with ephemeral ChromaDB — no mocking of the search layer
 import pytest
 from search_tools import CourseSearchTool, ToolManager
 
-
 # ---------------------------------------------------------------------------
 # CourseSearchTool – correct configuration (max_results=5)
 # ---------------------------------------------------------------------------
+
 
 class TestCourseSearchToolCorrectConfig:
     def test_execute_returns_results_with_valid_max_results(self, seeded_store):
@@ -63,6 +63,7 @@ class TestCourseSearchToolCorrectConfig:
 # CourseSearchTool – buggy configuration (max_results=0)
 # ---------------------------------------------------------------------------
 
+
 class TestCourseSearchToolBuggyConfig:
     def test_execute_fails_with_zero_max_results(self, seeded_buggy_store):
         """max_results=0 → search error mentioning zero/negative."""
@@ -81,6 +82,7 @@ class TestCourseSearchToolBuggyConfig:
 # ---------------------------------------------------------------------------
 # ToolManager
 # ---------------------------------------------------------------------------
+
 
 class TestToolManager:
     def test_execute_registered_tool(self, seeded_store):

@@ -13,10 +13,10 @@ from ai_generator import AIGenerator
 from session_manager import SessionManager
 from rag_system import RAGSystem
 
-
 # ---------------------------------------------------------------------------
 # Mock response helpers (same lightweight approach as test_ai_generator)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class MockTextBlock:
@@ -52,6 +52,7 @@ def _tool_call(name: str, inp: dict, tid: str = "toolu_01") -> MockMessage:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def rag_system(seeded_store):
@@ -122,6 +123,7 @@ def buggy_rag_system(seeded_buggy_store):
 # ---------------------------------------------------------------------------
 # Tests – correct config
 # ---------------------------------------------------------------------------
+
 
 class TestRAGQueryCorrectConfig:
     def test_tool_call_produces_response_with_sources(self, rag_system):
@@ -201,6 +203,7 @@ class TestRAGQueryCorrectConfig:
 # ---------------------------------------------------------------------------
 # Tests – buggy config (max_results=0)
 # ---------------------------------------------------------------------------
+
 
 class TestRAGQueryBuggyConfig:
     def test_search_error_in_tool_result(self, buggy_rag_system):
