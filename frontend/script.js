@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     newChatButton = document.getElementById('newChatButton');
 
     setupEventListeners();
+    setupThemeToggle();
     createNewSession();
     loadCourseStats();
 });
@@ -218,4 +219,38 @@ async function loadCourseStats() {
             courseTitles.innerHTML = '<span class="error">Failed to load courses</span>';
         }
     }
+}
+
+// Theme Toggle
+function setupThemeToggle() {
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme) {
+        document.body.setAttribute('data-theme', savedTheme);
+        updateToggleLabel(savedTheme);
+    }
+
+    themeToggle.addEventListener('click', toggleTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    if (newTheme === 'dark') {
+        document.body.removeAttribute('data-theme');
+    } else {
+        document.body.setAttribute('data-theme', newTheme);
+    }
+
+    localStorage.setItem('theme', newTheme);
+    updateToggleLabel(newTheme);
+}
+
+function updateToggleLabel(theme) {
+    const themeToggle = document.getElementById('themeToggle');
+    const label = theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    themeToggle.setAttribute('aria-label', label);
+    themeToggle.setAttribute('title', label);
 }
