@@ -2,7 +2,7 @@
 
 import sys
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -112,3 +112,25 @@ def seeded_buggy_store(sample_course_data):
     store.add_course_metadata(course)
     store.add_course_content(chunks)
     return store
+
+
+@pytest.fixture()
+def mock_rag_system():
+    """Mock RAGSystem suitable for API endpoint tests.
+
+    Pre-configured return values:
+    - query() returns an answer string and a list of source dicts
+    - get_course_analytics() returns a dict with total_courses and titles
+    - session_manager.create_session() returns "session_1"
+    """
+    rag = MagicMock()
+    rag.session_manager.create_session.return_value = "session_1"
+    rag.query.return_value = (
+        "Python is a high-level programming language.",
+        [{"text": "Introduction to Python - Lesson 1", "link": "https://example.com/python/lesson1"}],
+    )
+    rag.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Introduction to Python", "Advanced Python"],
+    }
+    return rag
