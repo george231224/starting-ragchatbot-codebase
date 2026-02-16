@@ -11,10 +11,10 @@ from typing import Any
 import pytest
 from ai_generator import AIGenerator
 
-
 # ---------------------------------------------------------------------------
 # Lightweight mock response objects
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class MockTextBlock:
@@ -40,7 +40,9 @@ def _make_text_response(text: str) -> MockMessage:
     return MockMessage(content=[MockTextBlock(text=text)], stop_reason="end_turn")
 
 
-def _make_tool_response(tool_name: str, tool_input: dict, tool_id: str = "toolu_01") -> MockMessage:
+def _make_tool_response(
+    tool_name: str, tool_input: dict, tool_id: str = "toolu_01"
+) -> MockMessage:
     return MockMessage(
         content=[MockToolUseBlock(id=tool_id, name=tool_name, input=tool_input)],
         stop_reason="tool_use",
@@ -50,6 +52,7 @@ def _make_tool_response(tool_name: str, tool_input: dict, tool_id: str = "toolu_
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def mock_client():
@@ -69,6 +72,7 @@ def generator(mock_client):
 # ---------------------------------------------------------------------------
 # Direct text responses (no tools)
 # ---------------------------------------------------------------------------
+
 
 class TestDirectResponses:
     def test_direct_text_response(self, mock_client, generator):
@@ -91,11 +95,14 @@ class TestDirectResponses:
 # Conversation history
 # ---------------------------------------------------------------------------
 
+
 class TestConversationHistory:
     def test_conversation_history_in_system_prompt(self, mock_client, generator):
         """History string is appended to system content."""
         mock_client.messages.create.return_value = _make_text_response("ok")
-        generator.generate_response(query="q", conversation_history="User: hi\nAssistant: hello")
+        generator.generate_response(
+            query="q", conversation_history="User: hi\nAssistant: hello"
+        )
 
         kwargs = mock_client.messages.create.call_args
         system = kwargs.kwargs.get("system") or kwargs[1].get("system")
@@ -116,6 +123,7 @@ class TestConversationHistory:
 # ---------------------------------------------------------------------------
 # Tool calling flow
 # ---------------------------------------------------------------------------
+
 
 class TestToolCalling:
     def test_tool_use_triggers_execution(self, mock_client, generator):
@@ -150,7 +158,9 @@ class TestToolCalling:
 
     def test_tool_result_message_format(self, mock_client, generator):
         """Follow-up call has correct 3-message structure."""
-        tool_response = _make_tool_response("search_course_content", {"query": "x"}, tool_id="t1")
+        tool_response = _make_tool_response(
+            "search_course_content", {"query": "x"}, tool_id="t1"
+        )
         mock_client.messages.create.side_effect = [
             tool_response,
             _make_text_response("final"),
@@ -159,7 +169,9 @@ class TestToolCalling:
         tool_manager.execute_tool.return_value = "tool output"
 
         generator.generate_response(
-            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager
+            query="q",
+            tools=[{"name": "search_course_content"}],
+            tool_manager=tool_manager,
         )
 
         # Second call's messages should be: user, assistant (tool_use), user (tool_result)
@@ -195,6 +207,7 @@ class TestToolCalling:
 # Multi-round tool calling
 # ---------------------------------------------------------------------------
 
+
 class TestMultiRoundToolCalling:
     def test_two_sequential_tool_rounds(self, mock_client, generator):
         """Claude makes two tool calls across separate API rounds, then gives a text answer."""
@@ -215,8 +228,12 @@ class TestMultiRoundToolCalling:
         assert result == "Here is the combined answer."
         assert mock_client.messages.create.call_count == 3
         assert tool_manager.execute_tool.call_count == 2
-        tool_manager.execute_tool.assert_any_call("get_course_outline", course_name="Python")
-        tool_manager.execute_tool.assert_any_call("search_course_content", query="decorators")
+        tool_manager.execute_tool.assert_any_call(
+            "get_course_outline", course_name="Python"
+        )
+        tool_manager.execute_tool.assert_any_call(
+            "search_course_content", query="decorators"
+        )
 
     def test_two_rounds_message_accumulation(self, mock_client, generator):
         """After two tool rounds the third API call receives 5 messages."""
@@ -229,14 +246,22 @@ class TestMultiRoundToolCalling:
         tool_manager.execute_tool.side_effect = ["outline", "results"]
 
         generator.generate_response(
-            query="q", tools=[{"name": "t"}], tool_manager=tool_manager,
+            query="q",
+            tools=[{"name": "t"}],
+            tool_manager=tool_manager,
         )
 
         # Third call (forced-text) should have: user, asst, user(tool_result), asst, user(tool_result)
         third_call = mock_client.messages.create.call_args_list[2]
         messages = third_call.kwargs["messages"]
         assert len(messages) == 5
-        assert [m["role"] for m in messages] == ["user", "assistant", "user", "assistant", "user"]
+        assert [m["role"] for m in messages] == [
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+            "user",
+        ]
 
     def test_max_rounds_forces_text_response(self, mock_client, generator):
         """When both rounds use tools, a final call without tools forces a text answer."""
@@ -249,7 +274,9 @@ class TestMultiRoundToolCalling:
         tool_manager.execute_tool.return_value = "data"
 
         result = generator.generate_response(
-            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager,
+            query="q",
+            tools=[{"name": "search_course_content"}],
+            tool_manager=tool_manager,
         )
 
         assert result == "forced final"
@@ -267,14 +294,18 @@ class TestMultiRoundToolCalling:
         tool_manager.execute_tool.return_value = "data"
 
         result = generator.generate_response(
-            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager,
+            query="q",
+            tools=[{"name": "search_course_content"}],
+            tool_manager=tool_manager,
         )
 
         assert result == "answer"
         assert mock_client.messages.create.call_count == 2
         assert tool_manager.execute_tool.call_count == 1
 
-    def test_tool_execution_exception_returns_error_to_claude(self, mock_client, generator):
+    def test_tool_execution_exception_returns_error_to_claude(
+        self, mock_client, generator
+    ):
         """If tool_manager.execute_tool raises, the error is sent as tool_result content."""
         mock_client.messages.create.side_effect = [
             _make_tool_response("search_course_content", {"query": "x"}, "t1"),
@@ -284,7 +315,9 @@ class TestMultiRoundToolCalling:
         tool_manager.execute_tool.side_effect = RuntimeError("connection failed")
 
         result = generator.generate_response(
-            query="q", tools=[{"name": "search_course_content"}], tool_manager=tool_manager,
+            query="q",
+            tools=[{"name": "search_course_content"}],
+            tool_manager=tool_manager,
         )
 
         assert result == "graceful answer"
