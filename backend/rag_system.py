@@ -21,9 +21,20 @@ class RAGSystem:
         self.vector_store = VectorStore(
             config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS
         )
-        self.ai_generator = AIGenerator(
-            config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL
-        )
+        if config.LLM_PROVIDER == "openrouter":
+            self.ai_generator = AIGenerator(
+                provider="openrouter",
+                api_key=config.OPENROUTER_API_KEY,
+                model=config.OPENROUTER_MODEL,
+                base_url=config.OPENROUTER_BASE_URL,
+            )
+        else:
+            self.ai_generator = AIGenerator(
+                provider="anthropic",
+                api_key=config.ANTHROPIC_API_KEY,
+                model=config.ANTHROPIC_MODEL,
+                base_url=config.ANTHROPIC_BASE_URL,
+            )
         self.session_manager = SessionManager(config.MAX_HISTORY)
 
         # Initialize search tools
